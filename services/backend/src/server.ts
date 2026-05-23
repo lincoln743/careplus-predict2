@@ -10,6 +10,7 @@ import { ZodError } from "zod";
 import { env } from "./infra/env.js";
 import { AppError } from "./shared/errors.js";
 import { authRoutes } from "./modules/auth/routes.js";
+import { simulationRoutes } from "./modules/simulation/sim_routes.js";
 
 const app = Fastify({
   logger: { level: env.LOG_LEVEL },
@@ -37,7 +38,6 @@ app.setErrorHandler((error, _req, reply) => {
       issues: error.issues.map((i) => ({ campo: i.path.join("."), erro: i.message })),
     });
   }
-  // Rate limit do plugin ja vem com statusCode 429.
   if ((error as { statusCode?: number }).statusCode === 429) {
     return reply.code(429).send({ code: "RATE_LIMITED", message: "Muitas requisicoes" });
   }
@@ -50,6 +50,7 @@ app.get("/health", async () => ({ status: "ok" }));
 
 // Rotas de dominio.
 await app.register(authRoutes);
+await app.register(simulationRoutes);
 
 const port = env.API_PORT;
 app
