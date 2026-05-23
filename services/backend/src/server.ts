@@ -11,6 +11,7 @@ import { env } from "./infra/env.js";
 import { AppError } from "./shared/errors.js";
 import { authRoutes } from "./modules/auth/routes.js";
 import { simulationRoutes } from "./modules/simulation/sim_routes.js";
+import { aiGatewayRoutes } from "./modules/ai-gateway/gw_routes.js";
 
 const app = Fastify({
   logger: { level: env.LOG_LEVEL },
@@ -51,6 +52,7 @@ app.get("/health", async () => ({ status: "ok" }));
 // Rotas de dominio.
 await app.register(authRoutes);
 await app.register(simulationRoutes);
+await app.register(aiGatewayRoutes);
 
 const port = env.API_PORT;
 app

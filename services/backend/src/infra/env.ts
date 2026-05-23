@@ -21,14 +21,15 @@ const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL: z.string().default("7d"),
 
-  // IA — usada pelo ai-gateway (item futuro), validada aqui ja:
+  // IA — usada pelo ai-gateway:
   BLUA_API_URL: z.string().url().optional(),
+  // Timeout generoso: prescricao encadeia varias tools + RAG.
+  BLUA_API_TIMEOUT_MS: z.coerce.number().default(90000),
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  // Lista os problemas e encerra. Sem subir o servidor pela metade.
   console.error("Configuracao de ambiente invalida:");
   for (const issue of parsed.error.issues) {
     console.error(`  - ${issue.path.join(".")}: ${issue.message}`);
