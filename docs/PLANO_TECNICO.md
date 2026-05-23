@@ -1,9 +1,66 @@
-# CarePlus Predict V2 — Plano Técnico e Arquitetura Alvo (v2)
+# CarePlus Predict V2 — Plano Técnico e Arquitetura Alvo (v3)
 
 > Documento de fundação. Define **o que vamos construir e por quê**, antes de escrever código.
 > Pasta nova do projeto: `/home/lincoln-pereira/VS Code/careplus-predict_2`
 > Pasta de referência (legado): `/home/lincoln-pereira/VS Code/careplus-predict`
-> Data: maio/2026 · **Versão 2** — integra as duas features de IA, migra para Supabase e fixa as salvaguardas clínicas.
+> Data: maio/2026 · **Versão 3** — consolida a execução real: stack da Blua descoberta, Supabase `rev2` criado, auth no ar.
+
+---
+
+## ⚡ Estado da execução (atualizado em 23/05/2026)
+
+Esta seção é o **ponto de retomada**. Se abrir um chat novo, reanexe este documento e continue daqui.
+
+### Concluído e validado
+
+**Wrapper HTTP da BluaDiagnostics (item 9, parte 1)** — feito e commitado.
+- A IA agora fala HTTP via `app/api/` no repo da Blua (branch `sprint2`, commit `fdebbb8`).
+- Endpoints: `GET /health` e `POST /api/v1/chat`. Roda em `http://localhost:8001`.
+- Traduz `BluaState` → contrato; extrai o bloco `<sugestao>` do texto; força `requer_revisao_medica: true`.
+- Testado: triagem, emergência (red flag → escalada), prescrição (com HITL). Todos os caminhos OK.
+- **Stack real da Blua (diverge do handover):** Groq + LangGraph + Chroma + sentence-transformers (NÃO OpenAI+pgvector). A IA fica intocada; só embrulhamos.
+- Pasta local da Blua: `~/VS Code/CP_01_Prompteia_ BluaDiagnostics` · repo: `github.com/lincoln743/bluadiagnostics` (branch sprint2).
+
+**Esqueleto do monorepo (item 1)** — feito e no GitHub.
+- Estrutura `apps/`, `services/`, `packages/`, `infra/` criada via `bootstrap_careplus_v2.sh`.
+- `.env.example`, `.gitignore` (protege `.env`), contrato da IA em `packages/shared-types/src/index.ts`.
+- Repo: `github.com/lincoln743/careplus-predict2`, branch `main` (renomeada de master).
+- Handovers e plano organizados em `docs/`.
+
+**Auth + RBAC + Users + Consentimento LGPD (item 2)** — feito e validado contra banco real.
+- `services/backend`: Fastify + supabase-js + argon2id + JWT (access 15m + refresh com rotação).
+- Detecção de reuso de refresh token (revoga a família). Guards `autenticar` / `exigirPapel`.
+- Validação zod, anti-enumeração no login, auditoria de eventos, `env.ts` falha-alto sem fallback.
+- Smoke test passou nos 9 casos. Auditoria gravando (`user.registered`, `login.success`, etc.).
+- Instalado via `install_item2_auth.sh`.
+
+### Infraestrutura provisionada
+
+**Supabase projeto `rev2`** (novo, separado do legado):
+- Project ref: `jcksmlsxndjnanjalvqz` · URL: `https://jcksmlsxndjnanjalvqz.supabase.co`
+- Org: `lincoln743's Org` (`gbflvovepsrvqsqtzgnd`) · plano free · região us-east-1 · custo $0.
+- Migrations aplicadas: `0001` (pgvector) e `0002` (users, refresh_tokens, consents, auditoria + RLS).
+- **Não confundir** com o projeto legado `krgdwqatialqsocwuzox` nem com `falago` (pausado).
+
+### Decisões tomadas nesta sessão
+
+1. **IA reusada por HTTP, wrapper dentro da Blua** (opção A). Código da IA não é portado.
+2. **Supabase via supabase-js + migrations SQL puro** (não Prisma) — coerente com RLS + pgvector.
+3. **Mobile começa em Expo managed/Go** (hot reload rápido no celular) e migra para **bare/dev build** só quando o Samsung Health SDK entrar (que exige módulo nativo). Wearable é mock até lá.
+4. **Node 20** exige o pacote `ws` para o supabase-js (realtime desligado, não usamos).
+5. **Regra de trabalho:** toda alteração de arquivo vem como comando colável (EOF/sed), nunca "ache e troque manualmente".
+
+### Pendências e cuidados
+
+- **Rotacionar chaves do Supabase `rev2`**: a service_role e os segredos JWT foram expostos numa screenshot. Resetar no painel (Settings → API) e regenerar JWT com `openssl rand -base64 32`. Projeto novo e sem dados → custo de rotação zero.
+- Apagar os backups `.env.BACKUP_SPRINT1` e `.env.before_sprint2_merge` na pasta da Blua (chaves antigas paradas).
+- Divergência de nome: repo `careplus-predict2` (sem underscore) vs. pasta `careplus-predict_2` (com underscore). Inofensivo, registrado.
+
+### Próximos itens do backlog (ordem sugerida)
+- **Item 4 — simulação** (liga/desliga, pacientes sintéticos): destrava a demo no celular.
+- **Item 3 — health** (séries temporais biométricas + agregações): base de dados clínicos.
+- **Item 9 (continuação) — ai-gateway**: BFF que chama a Blua, com pseudonimização usuário↔BNF.
+- Demais: tema claro/escuro, telas mobile, wearable mock, anamnese, RAG, web, observabilidade.
 
 ---
 
@@ -157,7 +214,7 @@ Response (IA → BFF):
 - `escalada` → **banner de emergência** (SAMU/CVV), não conversa mais.
 - `fora_de_escopo` → exibe a recusa educada.
 
-**Estado do repo da IA (primeira tarefa da fase):** verificar se já tem API HTTP (`fastapi`/`uvicorn`/`@app.post`) ou se é só pipeline Python. Se faltar, construir o wrapper FastAPI fino (a única lacuna que o handover aponta). A lógica de IA fica intocada nos dois casos.
+**Estado do repo da IA — RESOLVIDO (ver seção de execução no topo).** A Blua era um app Streamlit sem API HTTP. Construímos o wrapper FastAPI (`app/api/` na branch sprint2), que importa `build_graph`/`invoke_with_message` e traduz a saída. Descoberta importante: a `sugestao_prescricao` do contrato **não vem pronta** — vem como bloco `<sugestao>` embutido no texto; o wrapper extrai e estrutura. A stack real é Groq+LangGraph+Chroma (não OpenAI+pgvector); a IA fica intocada. O HITL (`requer_revisao_medica` sempre true) e a detecção de emergência por regra já estavam no código da Blua — confirmados, não precisamos adicionar.
 
 ---
 
@@ -305,20 +362,20 @@ Os da v1 (JWT+refresh, argon2, HTTPS, consentimento, audit logs, secrets só via
 
 ---
 
-## 15. Backlog priorizado (v2)
+## 15. Backlog priorizado (status atualizado v3)
 
-1. **Esqueleto do monorepo + `.env.example` + setup Supabase (pgvector, RLS).**
-2. **Backend: auth + RBAC + users + consentimento LGPD.**
-3. **Backend: health (séries temporais) + agregações.**
-4. **Backend: simulação (liga/desliga, pacientes sintéticos).**
-5. **Mobile: tema claro/escuro real + ThemeProvider.**
-6. **Mobile: client de API sem URL hardcoded + auth/refresh + telas de paciente.**
-7. **Mobile: WearableProvider (mock).**
-8. **Anamnese: backend + onboarding (alimenta o contexto da IA).**
-9. **IA conversacional — Fase 1:** verificar repo da IA → (wrapper FastAPI se faltar) → `ai-gateway` (pseudonimização + filtro de perfil + persistência) → chat do paciente → fila de prescrição (HITL) → banner de emergência.
-10. **RAG — Fase 1:** modelo de dados + pgvector → ingestão (1 documento, validar chunks) → recuperação isolada (testar qualidade) → máquina de validação → geração com citação + "não encontrei" → RBAC + tenant.
-11. **Web: dashboard médico + simulação + gráficos + chat + base de conhecimento.**
-12. **Observabilidade + audit completo + hardening + (Fase 2) OCR, groundedness, revogação.**
+1. ✅ **CONCLUÍDO** — Esqueleto do monorepo + `.env.example` + setup Supabase (pgvector, RLS).
+2. ✅ **CONCLUÍDO** — Backend: auth + RBAC + users + consentimento LGPD. (validado contra `rev2`)
+3. ⬜ **Backend: health (séries temporais) + agregações.**
+4. ⬜ **Backend: simulação (liga/desliga, pacientes sintéticos).** ← próximo sugerido
+5. ⬜ **Mobile: tema claro/escuro real + ThemeProvider.**
+6. ⬜ **Mobile: client de API sem URL hardcoded + auth/refresh + telas de paciente.**
+7. ⬜ **Mobile: WearableProvider (mock).**
+8. ⬜ **Anamnese: backend + onboarding (alimenta o contexto da IA).**
+9. 🟡 **PARCIAL — IA conversacional Fase 1:** ✅ wrapper FastAPI da Blua feito e testado. ⬜ Falta: `ai-gateway` (pseudonimização usuário↔BNF + filtro de perfil + persistência da conversa) → chat do paciente → fila de prescrição (HITL) → banner de emergência.
+10. ⬜ **RAG — Fase 1:** modelo de dados + pgvector → ingestão (1 documento, validar chunks) → recuperação isolada (testar qualidade) → máquina de validação → geração com citação + "não encontrei" → RBAC + tenant.
+11. ⬜ **Web: dashboard médico + simulação + gráficos + chat + base de conhecimento.**
+12. ⬜ **Observabilidade + audit completo + hardening + (Fase 2) OCR, groundedness, revogação.**
 
 > Ordem dentro de cada feature de IA segue o handover: **testar cada etapa isolada antes de integrar** — especialmente a recuperação do RAG (qualidade) antes de gerar respostas.
 
