@@ -1,0 +1,42 @@
+# Dependencias
+node_modules/
+.pnp/
+.pnp.js
+
+# Ambiente — NUNCA commitar (so o .env.example vai para o git)
+.env
+.env.*
+!.env.example
+*.local
+
+# Build
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Mobile
+.expo/
+*.apk
+*.aab
+*.ipa
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Testes / cobertura
+coverage/
+.nyc_output/
+
+# Supabase local
+.branches/
+.temp/
