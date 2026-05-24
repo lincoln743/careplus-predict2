@@ -14,6 +14,8 @@ import { simulationRoutes } from "./modules/simulation/sim_routes.js";
 import { aiGatewayRoutes } from "./modules/ai-gateway/gw_routes.js";
 import multipart from "@fastify/multipart";
 import { ragRoutes } from "./modules/rag/rag_routes.js";
+import { healthRoutes } from "./modules/health/health_routes.js";
+import { anamneseRoutes } from "./modules/anamnesis/anamnese_routes.js";
 
 const app = Fastify({
   logger: { level: env.LOG_LEVEL },
@@ -57,6 +59,8 @@ await app.register(simulationRoutes);
 await app.register(aiGatewayRoutes);
 await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
 await app.register(ragRoutes);
+await app.register(healthRoutes);
+await app.register(anamneseRoutes);
 
 const port = env.API_PORT;
 app
