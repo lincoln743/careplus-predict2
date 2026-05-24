@@ -3,14 +3,16 @@
  * interligados com a Home (mesma fonte). Mostra estatisticas + dados diarios.
  * (O grafico de passos semanais entra no bloco 3 — graficos animados.)
  */
-import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeProvider";
 import { spacing, radius, font } from "../theme/tokens";
-import { useSimulation } from "../store/simulation";
+import { useSimulation, type DiaPassos } from "../store/simulation";
 import { AreaChart } from "../components/AreaChart";
+import { AnamneseModal } from "../components/AnamneseModal";
+import { buscarMinhaSerie } from "../api/client";
 
 function Stat({ valor, label }: { valor: string; label: string }) {
   const { colors } = useTheme();
@@ -34,17 +36,54 @@ export function MeusDadosScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { ativo, data } = useSimulation();
+  const [anamneseAberta, setAnamneseAberta] = useState(false);
 
-  const semana = ativo ? data.semana : SEMANA_REAL;
-  const media = ativo ? data.mediaDiaria : 7203;
-  const max = ativo ? data.maximo : 9412;
-  const min = ativo ? data.minimo : 5400;
-  const total = ativo ? data.totalSemanal : 28812;
+  const [serieBackend, setSerieBackend] = useState<DiaPassos[] | null>(null);
+  const [carregandoSerie, setCarregandoSerie] = useState(false);
+
+  // Modo simulado OFF: busca o historico real do backend (/health/me/series).
+  useEffect(() => {
+    if (ativo) return; // modo ON usa o motor local
+    setCarregandoSerie(true);
+    buscarMinhaSerie("7d")
+      .then((s) => {
+        const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const convertido: DiaPassos[] = s.pontos.map((p) => {
+          const d = new Date(p.data + "T00:00:00");
+          return {
+            dia: dias[d.getDay()],
+            data: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`,
+            passos: p.passos,
+            sono: p.sono_horas,
+          };
+        });
+        setSerieBackend(convertido);
+      })
+      .catch(() => setSerieBackend(null))
+      .finally(() => setCarregandoSerie(false));
+  }, [ativo]);
+
+  // Fonte dos dados: ON = motor local; OFF = backend (se carregou) ou fallback estatico.
+  const semana = ativo ? data.semana : (serieBackend ?? SEMANA_REAL);
+  const passosArr = semana.map((d) => d.passos);
+  const media = ativo ? data.mediaDiaria : (passosArr.length ? Math.round(passosArr.reduce((a, b) => a + b, 0) / passosArr.length) : 7203);
+  const max = ativo ? data.maximo : (passosArr.length ? Math.max(...passosArr) : 9412);
+  const min = ativo ? data.minimo : (passosArr.length ? Math.min(...passosArr) : 5400);
+  const total = ativo ? data.totalSemanal : (passosArr.reduce((a, b) => a + b, 0) || 28812);
 
   return (
+    <>
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}>
       <Text style={[styles.titulo, { color: colors.primary }]}>Meus Dados de Saúde</Text>
-      <Text style={[styles.fonte, { color: colors.textMuted }]}>Fonte: backend{ativo ? " · simulado" : ""}</Text>
+      <Text style={[styles.fonte, { color: colors.textMuted }]}>
+        Fonte: {ativo ? "motor de simulação · ao vivo" : carregandoSerie ? "carregando do backend..." : serieBackend ? "backend · histórico" : "backend"}
+      </Text>
+
+      <Pressable onPress={() => setAnamneseAberta(true)} style={[styles.btnAnamnese, { backgroundColor: colors.primary }]}>
+        <Ionicons name="clipboard-outline" size={18} color="#fff" />
+        <Text style={styles.btnAnamneseTexto}>Preencher anamnese</Text>
+        <Ionicons name="chevron-forward" size={18} color="#fff" style={{ marginLeft: "auto" }} />
+      </Pressable>
 
       <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
         <Text style={[styles.blocoTitulo, { color: colors.text }]}>Estatísticas da Semana</Text>
@@ -87,6 +126,8 @@ export function MeusDadosScreen() {
         <View style={styles.rec}><Ionicons name="barbell" size={18} color={colors.success} /><Text style={[styles.recT, { color: colors.text }]}>Você está no caminho certo!</Text></View>
       </View>
     </ScrollView>
+    <AnamneseModal visivel={anamneseAberta} aoFechar={() => setAnamneseAberta(false)} />
+    </>
   );
 }
 
@@ -94,6 +135,8 @@ const styles = StyleSheet.create({
   container: { padding: spacing.lg },
   titulo: { fontSize: font.size.xxl, fontWeight: font.weight.bold },
   fonte: { fontStyle: "italic", marginBottom: spacing.md, fontSize: font.size.sm },
+  btnAnamnese: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.lg },
+  btnAnamneseTexto: { color: "#fff", fontSize: font.size.md, fontWeight: font.weight.semibold },
   bloco: { borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg },
   blocoTitulo: { fontSize: font.size.lg, fontWeight: font.weight.semibold, marginBottom: spacing.md },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },

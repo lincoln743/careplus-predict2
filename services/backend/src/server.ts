@@ -6,6 +6,7 @@ import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import helmet from "@fastify/helmet";
 import { ZodError } from "zod";
 import { env } from "./infra/env.js";
 import { AppError } from "./shared/errors.js";
@@ -16,12 +17,15 @@ import multipart from "@fastify/multipart";
 import { ragRoutes } from "./modules/rag/rag_routes.js";
 import { healthRoutes } from "./modules/health/health_routes.js";
 import { anamneseRoutes } from "./modules/anamnesis/anamnese_routes.js";
+import { wearableRoutes } from "./modules/wearable/wearable_routes.js";
+import { observabilityRoutes } from "./modules/observability/health_check.js";
 
 const app = Fastify({
   logger: { level: env.LOG_LEVEL },
 });
 
 await app.register(cookie);
+await app.register(helmet, { contentSecurityPolicy: false });
 await app.register(cors, {
   origin: true, // ajustar para os dominios do app/web em producao
   credentials: true,
@@ -61,6 +65,8 @@ await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
 await app.register(ragRoutes);
 await app.register(healthRoutes);
 await app.register(anamneseRoutes);
+await app.register(wearableRoutes);
+await app.register(observabilityRoutes);
 
 const port = env.API_PORT;
 app

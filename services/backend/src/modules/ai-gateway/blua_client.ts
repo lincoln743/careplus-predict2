@@ -49,6 +49,16 @@ export async function chamarBlua(req: BluaRequest): Promise<BluaResponse> {
       throw new Error(`Blua respondeu ${r.status}`);
     }
     return (await r.json()) as BluaResponse;
+  } catch (e) {
+    // Traduz falhas tecnicas em mensagens claras para o usuario.
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Servico de IA demorou a responder. Tente novamente em instantes.");
+    }
+    if (e instanceof TypeError) {
+      // fetch lanca TypeError quando nao consegue conectar (Blua fora do ar)
+      throw new Error("Servico de IA indisponivel no momento. Tente novamente em instantes.");
+    }
+    throw e;
   } finally {
     clearTimeout(timer);
   }

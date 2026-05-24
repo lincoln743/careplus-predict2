@@ -96,3 +96,23 @@ export async function uploadArquivo<T>(
   }
   return data as T;
 }
+
+// ---- Series temporais de saude (item 3) ----
+export interface PontoSerie {
+  data: string;        // YYYY-MM-DD
+  passos: number;
+  sono_horas: number;
+  fc_media: number;
+}
+export interface SerieSaude {
+  chave: string;
+  nome: string;
+  periodo: string;
+  is_simulated: boolean;
+  pontos: PontoSerie[];
+  resumo: { passos_media: number; sono_media: number; fc_media: number; passos_total: number; dias: number };
+}
+
+export async function buscarMinhaSerie(periodo = "7d"): Promise<SerieSaude> {
+  return apiRequest<SerieSaude>(`/health/me/series?periodo=${periodo}`, { auth: true });
+}
