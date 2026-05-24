@@ -12,6 +12,8 @@ import { AppError } from "./shared/errors.js";
 import { authRoutes } from "./modules/auth/routes.js";
 import { simulationRoutes } from "./modules/simulation/sim_routes.js";
 import { aiGatewayRoutes } from "./modules/ai-gateway/gw_routes.js";
+import multipart from "@fastify/multipart";
+import { ragRoutes } from "./modules/rag/rag_routes.js";
 
 const app = Fastify({
   logger: { level: env.LOG_LEVEL },
@@ -53,6 +55,8 @@ app.get("/health", async () => ({ status: "ok" }));
 await app.register(authRoutes);
 await app.register(simulationRoutes);
 await app.register(aiGatewayRoutes);
+await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+await app.register(ragRoutes);
 
 const port = env.API_PORT;
 app
