@@ -3,7 +3,7 @@
 > Documento de fundação. Define **o que vamos construir e por quê**, antes de escrever código.
 > Pasta nova do projeto: `/home/lincoln-pereira/VS Code/careplus-predict_2`
 > Pasta de referência (legado): `/home/lincoln-pereira/VS Code/careplus-predict`
-> Data: maio/2026 · **Versão 3** — consolida a execução real: stack da Blua descoberta, Supabase `rev2` criado, auth no ar.
+> Data: maio/2026 · **Versão 5** — backend (auth+sim+ai-gateway) E2E + app mobile completo (6 blocos de UI). App roda no celular.
 
 ---
 
@@ -12,6 +12,16 @@
 Esta seção é o **ponto de retomada**. Se abrir um chat novo, reanexe este documento e continue daqui.
 
 ### Concluído e validado
+
+**ai-gateway (item 9 COMPLETO)** — conecta a Blua ao backend, validado E2E com IA real.
+- `services/backend/src/modules/ai-gateway/`: pseudonymizer (BNF aleatório), blua_client (HTTP), gw_service (orquestração), gw_routes.
+- Pseudonimização usuário↔BNF (mapa só no nosso banco; IA nunca vê nome/UUID).
+- Filtro por perfil: paciente não vê prescrição crua nem trilha; médico vê tudo; ambos veem red_flags (banner emergência).
+- Persistência de conversa (ai_threads/ai_messages) — resolve o "Blua só guarda em RAM".
+- Fila de prescrição HITL (pendente→aprovada/editada/recusada), com auditoria.
+- Migration 0004 aplicada no rev2. Instalado via `install_item9_gateway.sh`.
+- **Validado:** triagem (paciente, filtrado), emergência (red_flags), prescrição (médico, vira card na fila). Confirmado no banco: 6 pseudônimos, threads/mensagens persistidas, 1 prescrição pendente.
+- **Comportamento clínico seguro observado:** sem histórico do paciente, a IA recusou prescrever e encaminhou para teleconsulta (não alucinou dose). Exatamente o esperado.
 
 **Wrapper HTTP da BluaDiagnostics (item 9, parte 1)** — feito e commitado.
 - A IA agora fala HTTP via `app/api/` no repo da Blua (branch `sprint2`, commit `fdebbb8`).
@@ -52,9 +62,55 @@ Esta seção é o **ponto de retomada**. Se abrir um chat novo, reanexe este doc
 
 ### Pendências e cuidados
 
-- **Rotacionar chaves do Supabase `rev2`**: a service_role e os segredos JWT foram expostos numa screenshot. Resetar no painel (Settings → API) e regenerar JWT com `openssl rand -base64 32`. Projeto novo e sem dados → custo de rotação zero.
-- Apagar os backups `.env.BACKUP_SPRINT1` e `.env.before_sprint2_merge` na pasta da Blua (chaves antigas paradas).
-- Divergência de nome: repo `careplus-predict2` (sem underscore) vs. pasta `careplus-predict_2` (com underscore). Inofensivo, registrado.
+- **🔴 DEPLOY PARA PRODUÇÃO / 4G (decisão arquitetural importante, planejar antes do APK).** Hoje tudo roda local: backend (`localhost:3000`), Blua (`localhost:8001`), e o app aponta para o IP da rede (`192.168.0.200`). Isso só funciona com PC e celular na mesma Wi-Fi. Para o APK rodar no 4G **sem depender da máquina**, é preciso hospedar os serviços na nuvem:
+  - **Backend Fastify** → deploy (ex: Render, Railway, Fly.io). Vira uma URL pública `https://...`.
+  - **Blua (wrapper FastAPI)** → deploy próprio (Render, etc.). O `BLUA_API_URL` do backend aponta para essa URL pública.
+  - **Supabase** → já é nuvem (rev2), nada muda.
+  - **App mobile** → o `EXPO_PUBLIC_API_BASE_URL` passa a ser a URL pública do backend (HTTPS), não o IP local. Aí o APK funciona em qualquer rede.
+  - **Ordem sugerida:** deixar o app maduro localmente primeiro; quando estável, fazer o deploy dos dois serviços e trocar a URL. O APK gerado com a URL pública roda no 4G sem os 3 terminais.
+  - Atenção: HTTPS obrigatório em produção (já é princípio do projeto); a Blua precisa de auth na frente (hoje roda aberta em rede interna — em nuvem, expor `/api/v1/chat` exige proteção, ex: o backend ser o único a chamá-la, com a Blua em rede privada ou com chave).
+
+- **Investigação de latência da prescrição (decidida: otimizar depois).** Medido: triagem ~1,8s, prescrição ~57s. Causa provável: modelo premium da Groq (`llama-3.3-70b-versatile`) + encadeamento raciocínio→tool→RAG→geração. Opções futuras: modelo intermediário, streaming, paralelizar. **No produto:** chat já mostra "analisando... pode levar até 1 min".
+- **Melhoria do ai-gateway:** health check da Blua + erro claro ("serviço de IA indisponível") em vez de timeout genérico.
+- **`.env.example` deve trazer `BLUA_API_TIMEOUT_MS=120000`** (estava 30000, curto demais para prescrição).
+- **Orquestração local exige 3 serviços no ar:** Blua (8001), backend (3000), Supabase (remoto). Mudança em `.env` NÃO é hot-reload — reiniciar o backend.
+- Apagar os backups `.env.BACKUP_SPRINT1` e `.env.before_sprint2_merge` na pasta da Blua.
+- Divergência de nome: repo `careplus-predict2` vs. pasta `careplus-predict_2`. Inofensivo.
+
+### App Mobile — CONSTRUÍDO E RODANDO NO CELULAR (itens 5 e 6)
+
+Stack: Expo SDK 54, React 19, react-native-svg, @expo/vector-icons, zustand, react-navigation.
+Pasta: `apps/mobile`. Roda via `npx expo start` + Expo Go. `.env`: `EXPO_PUBLIC_API_BASE_URL=http://192.168.0.200:3000`.
+
+**Decisões de mobile:**
+- Expo SDK 54 (bate com o Expo Go do usuário — iPhone e Xiaomi). Versões resolvidas por `npx expo install` (não fixar à mão). Instalar com `--legacy-peer-deps`.
+- Entry: `main: "index.js"` + `index.js` com `registerRootComponent(App)`. Imports relativos SEM `.js` (Metro). Arquivos na raiz de `apps/mobile` usam `./`, em subpastas usam `../`.
+- Cor da marca: **#0179CF** (azul CarePlus/Bupa, extraído do logo). NÃO azul-petróleo.
+- Validação offline de sintaxe: `esbuild` com os imports marcados como `--external` (rápido, pega typos antes de entregar).
+
+**Blocos de UI entregues (todos via tarball, aplicados com sucesso):**
+- Bloco 1: cor da marca, login pré-preenchido (paciente/médico), splash 5s, safe area/notch, fontes iOS.
+- Bloco 2: motor de simulação (`store/simulation.ts`) — fonte única, dados interligados, atualiza 5s. Toggle "Modo Simulado" nas Config. Home/MeusDados/Métricas ligadas ao motor.
+- Bloco 3: gráficos animados — AreaChart (passos semanais, sono — spline suave) e BarChart (atividade física), grade tracejada. Gauge anima de 0 ao valor.
+- Bloco 4: área do médico — Dashboard, Pacientes (filtros + 3 pacientes ao vivo do motor), IA Médico (placeholder "em breve" honesto). Chat IA removido do médico.
+- Bloco 5: indicadores tempo real — LiveIndicator (chip smartwatch + hora ao vivo, só no simulado), LiveValue (fade sutil quando número muda).
+- Bloco 6 + ajustes: telas completas reconstruídas (Config paciente/médico com Notificações/Integrações/Funcionalidades, Métricas médico com filtros período/Pacientes/Consultas/Alertas/Evolução, Sobre médico e paciente completas). Tema virou toggle "Modo Escuro". Samsung Health + Apple HealthKit. Teclado do chat corrigido (iOS offset).
+
+**Telas mobile (apps/mobile):**
+- App.tsx (splash 5s, sem login automático, SafeAreaProvider), index.js, app.config.ts, navigation.tsx
+- theme/ (tokens #0179CF, ThemeProvider com toggleDark), api/client.ts, store/auth.ts, store/simulation.ts
+- components/ (ScoreGauge, AreaChart, BarChart, LiveIndicator, LiveValue)
+- screens/ paciente: Splash, Login, Home, MeusDados, Metricas, Chat, Settings, Sobre
+- screens/ médico: MedicoDashboard, MedicoPacientes, MedicoMetricas, MedicoIA, MedicoConfig
+
+**Pendências do mobile (retomar amanhã):**
+- AUDITORIA DE BOTÕES (ver seção no fim — requisito do usuário: tudo funcionando).
+- Filtros de período (7d/30d/3m/1a) na Métricas do médico são visuais (não recalculam dados).
+- Botões de lista na Sobre (Treinamento Médico, Diretrizes, etc.) não navegam — decidir na auditoria.
+- Ações Rápidas do Dashboard médico (Relatório/Críticos/Agenda/Exportar) são visuais.
+- Cards de paciente: decidir se abrem detalhe.
+- Médico tem 6 abas — verificar se a tab bar não fica apertada.
+- IA do Médico (upload + RAG) depende do item 10 (RAG) no backend, ainda não feito.
 
 ### Próximos itens do backlog (ordem sugerida)
 - **Item 4 — simulação** (liga/desliga, pacientes sintéticos): destrava a demo no celular.
@@ -367,12 +423,12 @@ Os da v1 (JWT+refresh, argon2, HTTPS, consentimento, audit logs, secrets só via
 1. ✅ **CONCLUÍDO** — Esqueleto do monorepo + `.env.example` + setup Supabase (pgvector, RLS).
 2. ✅ **CONCLUÍDO** — Backend: auth + RBAC + users + consentimento LGPD. (validado contra `rev2`)
 3. ⬜ **Backend: health (séries temporais) + agregações.**
-4. ⬜ **Backend: simulação (liga/desliga, pacientes sintéticos).** ← próximo sugerido
-5. ⬜ **Mobile: tema claro/escuro real + ThemeProvider.**
-6. ⬜ **Mobile: client de API sem URL hardcoded + auth/refresh + telas de paciente.**
+4. ✅ **CONCLUÍDO** — Backend: simulação (liga/desliga, pacientes sintéticos). (validado, migration 0003)
+5. ✅ **CONCLUÍDO** — Mobile: tema claro/escuro + ThemeProvider (toggle Modo Escuro).
+6. ✅ **CONCLUÍDO** — Mobile: client de API (URL via config), auth, telas paciente E médico completas, simulação, gráficos, tempo real. App roda no celular. Falta: auditoria de botões.
 7. ⬜ **Mobile: WearableProvider (mock).**
 8. ⬜ **Anamnese: backend + onboarding (alimenta o contexto da IA).**
-9. 🟡 **PARCIAL — IA conversacional Fase 1:** ✅ wrapper FastAPI da Blua feito e testado. ⬜ Falta: `ai-gateway` (pseudonimização usuário↔BNF + filtro de perfil + persistência da conversa) → chat do paciente → fila de prescrição (HITL) → banner de emergência.
+9. ✅ **CONCLUÍDO** — IA conversacional Fase 1: wrapper FastAPI + ai-gateway (pseudonimização, filtro de perfil, persistência, fila HITL, emergência). Validado E2E com IA real, migrations 0004.
 10. ⬜ **RAG — Fase 1:** modelo de dados + pgvector → ingestão (1 documento, validar chunks) → recuperação isolada (testar qualidade) → máquina de validação → geração com citação + "não encontrei" → RBAC + tenant.
 11. ⬜ **Web: dashboard médico + simulação + gráficos + chat + base de conhecimento.**
 12. ⬜ **Observabilidade + audit completo + hardening + (Fase 2) OCR, groundedness, revogação.**
@@ -416,3 +472,13 @@ Herdadas dos handovers, a decidir com dado real:
 3. Seguimos o backlog, uma entrega validável por vez.
 
 > Ferramenta: para eu navegar e editar arquivos direto na sua máquina (e usar o Supabase MCP com seu projeto real), o **Claude Code** é o caminho. Aqui no chat eu funciono como arquiteto e gerador de código empacotado.
+
+---
+
+## 🔍 AUDITORIA FINAL DE BOTÕES (pendente — antes de fechar o app)
+Requisito do Lincoln: **nada de enfeite, tudo funcionando.** Antes de considerar o app pronto, varrer TODOS os botões/toques e classificar:
+- ✅ Funciona (faz ação real)
+- ⚠️ Placeholder honesto (marcado "em breve" — ex: IA Médico upload, Ações Rápidas do dashboard)
+- ❌ Enfeite (parece clicável mas não faz nada → CORRIGIR: ou fazer funcionar, ou remover, ou marcar "em breve")
+
+Telas a auditar: Login (Esqueceu senha?), Home, Meus Dados, Métricas, Chat IA, Config, Sobre, Dashboard médico (Ações Rápidas: Relatório/Críticos/Agenda/Exportar), Pacientes (cards — abrem detalhe?), IA Médico (upload/pesquisa).
