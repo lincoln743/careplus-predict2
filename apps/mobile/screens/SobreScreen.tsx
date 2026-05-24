@@ -5,7 +5,7 @@
  * Paciente: versao equivalente com o que faz sentido (sem jargao clinico).
  */
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, Linking } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, Linking, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeProvider";
@@ -25,10 +25,10 @@ function Header({ icon, titulo }: { icon: string; titulo: string }) {
 function ItemLista({ icon, texto }: { icon: string; texto: string }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.item}>
+    <Pressable style={styles.item} onPress={() => Alert.alert(texto, "Funcionalidade em breve.")}>
       <Ionicons name={icon as never} size={18} color={colors.primary} />
       <Text style={[styles.itemText, { color: colors.text }]}>{texto}</Text>
-    </View>
+    </Pressable>
   );
 }
 

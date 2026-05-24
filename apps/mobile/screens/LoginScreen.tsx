@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeProvider";
@@ -78,7 +78,9 @@ export function LoginScreen() {
         )}
       </Pressable>
 
-      <Text style={[styles.link, { color: colors.primary }]}>Esqueceu sua senha?</Text>
+      <Pressable onPress={() => Alert.alert("Recuperar senha", "Para redefinir sua senha, entre em contato com o suporte: suporte@careplus.com.br")}>
+        <Text style={[styles.link, { color: colors.primary }]}>Esqueceu sua senha?</Text>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

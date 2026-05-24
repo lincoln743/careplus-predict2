@@ -4,7 +4,6 @@
   "private": true,
   "description": "CarePlus Predict V2 — monorepo (mobile + web + backend)",
   "workspaces": [
-    "apps/*",
     "services/*",
     "packages/*"
   ],

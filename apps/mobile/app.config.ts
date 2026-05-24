@@ -8,7 +8,7 @@ const config: ExpoConfig = {
   slug: "careplus-predict",
   version: "2.0.0",
   orientation: "portrait",
-  userInterfaceStyle: "automatic", // suporta claro/escuro do sistema
+  userInterfaceStyle: "light", // sistema NAO controla o tema; o ThemeProvider do app controla
   splash: { resizeMode: "contain", backgroundColor: "#0E1518" },
   ios: { supportsTablet: true },
   android: {

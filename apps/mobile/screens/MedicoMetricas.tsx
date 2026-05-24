@@ -40,6 +40,21 @@ export function MedicoMetricas() {
   const alto = pacientes.filter((p) => p.score < 50).length;
   const pct = (n: number) => (pacientes.length ? Math.round((n / pacientes.length) * 100) : 0);
 
+  // Fator de escala por periodo: numeros acumulativos (consultas, alertas)
+  // crescem com a janela de tempo. 7d e a base; 30d ~4x; 3m ~13x; 1a ~52x.
+  const fator: Record<Periodo, number> = { "7d": 1, "30d": 4, "3m": 13, "1a": 52 };
+  const f = fator[periodo];
+  // "Novos" pacientes tambem escala com o periodo.
+  const novos = periodo === "7d" ? total : Math.round(total * (periodo === "30d" ? 1.5 : periodo === "3m" ? 2.5 : 4));
+  // Consultas (acumulativas)
+  const realizadas = 9 * f;
+  const agendadas = 5;
+  const cancelamentos = Math.max(1, Math.round(1 * f * 0.7));
+  // Alertas (acumulativos)
+  const alertasTotal = 2 * f;
+  const alertasResolvidos = Math.round(alertasTotal * 0.9);
+  const alertasCriticos = periodo === "7d" ? 0 : Math.round(alertasTotal * 0.05);
+
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}>
       <Text style={[styles.titulo, { color: colors.primary }]}>Métricas</Text>
@@ -61,7 +76,7 @@ export function MedicoMetricas() {
           <Metric icon="people" valor={`${total}`} label="Total" />
           <Metric icon="person" valor={`${total - altoRisco}`} label="Ativos" />
           <Metric icon="warning" valor={`${altoRisco}`} label="Em Risco" cor={altoRisco > 0 ? colors.danger : colors.primary} />
-          <Metric icon="sparkles" valor={`${total}`} label="Novos" />
+          <Metric icon="sparkles" valor={`${novos}`} label="Novos" />
         </View>
       </View>
 
@@ -69,9 +84,9 @@ export function MedicoMetricas() {
       <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
         <Text style={[styles.blocoTitulo, { color: colors.primary }]}>Consultas e Agendamentos</Text>
         <View style={styles.grid}>
-          <Metric icon="checkmark-done" valor="9" label="Realizadas" />
-          <Metric icon="calendar" valor="5" label="Agendadas" />
-          <Metric icon="close-circle" valor="1" label="Cancelamentos" cor={colors.danger} />
+          <Metric icon="checkmark-done" valor={`${realizadas}`} label="Realizadas" />
+          <Metric icon="calendar" valor={`${agendadas}`} label="Agendadas" />
+          <Metric icon="close-circle" valor={`${cancelamentos}`} label="Cancelamentos" cor={colors.danger} />
           <Metric icon="time" valor="2.4d" label="Espera média" />
         </View>
       </View>
@@ -80,9 +95,9 @@ export function MedicoMetricas() {
       <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
         <Text style={[styles.blocoTitulo, { color: colors.primary }]}>Gestão de Alertas</Text>
         <View style={styles.grid}>
-          <Metric icon="notifications" valor="2" label="Total" />
-          <Metric icon="checkmark-circle" valor="2" label="Resolvidos" cor={colors.success} />
-          <Metric icon="alert-circle" valor="0" label="Críticos" cor={colors.danger} />
+          <Metric icon="notifications" valor={`${alertasTotal}`} label="Total" />
+          <Metric icon="checkmark-circle" valor={`${alertasResolvidos}`} label="Resolvidos" cor={colors.success} />
+          <Metric icon="alert-circle" valor={`${alertasCriticos}`} label="Críticos" cor={colors.danger} />
           <Metric icon="time" valor="1.8h" label="Resp. média" />
         </View>
       </View>

@@ -5,7 +5,7 @@
  * sao marcados "em breve" (honesto — nada de enfeite).
  */
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Switch } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -75,7 +75,7 @@ export function SettingsScreen() {
         <View style={styles.headerLinha}><Ionicons name="link-outline" size={18} color={colors.primary} /><Text style={[styles.blocoTitulo, { color: colors.primary }]}>Integrações</Text></View>
         <LinhaSwitch titulo="Apple HealthKit" valor={healthkit} onValor={setHealthkit} emBreve />
         <LinhaSwitch titulo="Samsung Health" valor={samsung} onValor={setSamsung} emBreve />
-        <Pressable style={styles.linkAcao}><Ionicons name="add" size={18} color={colors.primary} /><Text style={[styles.linkText, { color: colors.primary }]}>Adicionar Integração</Text></Pressable>
+        <Pressable style={styles.linkAcao} onPress={() => Alert.alert("Adicionar Integração", "Funcionalidade em breve.")}><Ionicons name="add" size={18} color={colors.primary} /><Text style={[styles.linkText, { color: colors.primary }]}>Adicionar Integração</Text></Pressable>
       </View>
 
       {/* Conta */}

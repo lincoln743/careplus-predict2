@@ -4,7 +4,7 @@
  * Switches persistem; itens sem efeito real marcados "em breve".
  */
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Switch } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -56,7 +56,7 @@ export function MedicoConfig() {
         <Text style={[styles.nome, { color: colors.text }]}>{user?.nome ?? "Dr."}</Text>
         <Text style={[styles.prof, { color: colors.textMuted }]}>{user?.especialidade ?? "Cardiologista"} | CRM {user?.crm ?? "—"}</Text>
         <Text style={[styles.prof, { color: colors.textMuted }]}>Hospital CarePlus - Unidade Paulista</Text>
-        <Pressable style={styles.linkAcao}><Ionicons name="create-outline" size={16} color={colors.primary} /><Text style={[styles.linkText, { color: colors.primary }]}>Editar Informações</Text></Pressable>
+        <Pressable style={styles.linkAcao} onPress={() => Alert.alert("Editar Informações", "Funcionalidade em breve.")}><Ionicons name="create-outline" size={16} color={colors.primary} /><Text style={[styles.linkText, { color: colors.primary }]}>Editar Informações</Text></Pressable>
       </View>
 
       {/* Aparencia + Modo Simulado */}

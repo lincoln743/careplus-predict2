@@ -3,7 +3,7 @@
  * acoes rapidas. Score medio derivado dos pacientes do motor (interligado).
  */
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeProvider";
@@ -23,7 +23,7 @@ function Metric({ icon, valor, label, cor }: { icon: string; valor: string; labe
   );
 }
 
-export function MedicoDashboard() {
+export function MedicoDashboard({ navigation }: any) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { ativo, data } = useSimulation();
@@ -66,11 +66,23 @@ export function MedicoDashboard() {
       <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
         <Text style={[styles.blocoTitulo, { color: colors.primary }]}>Ações Rápidas</Text>
         <View style={styles.grid}>
-          {[["document-text", "Relatório Mensal"], ["alert-circle", "Pacientes Críticos"], ["calendar", "Agenda"], ["download", "Exportar Dados"]].map(([ic, t], i) => (
-            <View key={i} style={[styles.acao, { backgroundColor: colors.surfaceAlt }]}>
+{([
+            ["document-text", "Relatório Mensal", "em-breve"],
+            ["alert-circle", "Pacientes Críticos", "navega"],
+            ["calendar", "Agenda", "em-breve"],
+            ["download", "Exportar Dados", "em-breve"],
+          ] as const).map(([ic, t, acao], i) => (
+            <Pressable
+              key={i}
+              style={[styles.acao, { backgroundColor: colors.surfaceAlt }]}
+              onPress={() => {
+                if (acao === "navega") navigation.navigate("Pacientes");
+                else Alert.alert(t, "Funcionalidade em breve.");
+              }}
+            >
               <Ionicons name={ic as never} size={20} color={colors.primary} />
               <Text style={[styles.acaoText, { color: colors.text }]}>{t}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       </View>

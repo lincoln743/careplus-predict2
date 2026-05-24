@@ -1,51 +1,46 @@
 /**
- * ThemeProvider: gerencia o tema (system/light/dark) com persistencia.
- * O modo "system" segue o esquema do aparelho. A preferencia e salva localmente.
+ * ThemeProvider: gerencia o tema com APENAS dois estados — claro e escuro.
+ * (Sem "seguir o sistema".) Padrao inicial: escuro (dark-first, identidade V1).
+ * A preferencia e salva localmente e restaurada ao abrir.
  */
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { darkColors, lightColors, type ThemeColors, type ThemeMode } from "./tokens";
+import { darkColors, lightColors, type ThemeColors } from "./tokens";
 
 interface ThemeContextValue {
-  mode: ThemeMode;
   colors: ThemeColors;
   isDark: boolean;
-  setMode: (m: ThemeMode) => void;
+  setDark: (v: boolean) => void;
   toggleDark: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
-const STORAGE_KEY = "@careplus/theme-mode";
+const STORAGE_KEY = "@careplus/dark-mode";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const system = useColorScheme(); // 'light' | 'dark' | null
-  const [mode, setModeState] = useState<ThemeMode>("system");
+  // Padrao: escuro. Restaura a preferencia salva ao abrir.
+  const [isDark, setIsDark] = useState<boolean>(true);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((saved) => {
-      if (saved === "light" || saved === "dark" || saved === "system") {
-        setModeState(saved);
-      }
+      if (saved === "0") setIsDark(false);
+      else if (saved === "1") setIsDark(true);
     });
   }, []);
 
-  function setMode(m: ThemeMode) {
-    setModeState(m);
-    AsyncStorage.setItem(STORAGE_KEY, m);
+  function setDark(v: boolean) {
+    setIsDark(v);
+    AsyncStorage.setItem(STORAGE_KEY, v ? "1" : "0");
   }
 
   function toggleDark() {
-    // Toggle direto: alterna entre claro e escuro explicitos.
-    setMode(isDark ? "light" : "dark");
+    setDark(!isDark);
   }
 
-  const effective = mode === "system" ? (system ?? "dark") : mode;
-  const isDark = effective === "dark";
   const colors = isDark ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{ mode, colors, isDark, setMode, toggleDark }}>
+    <ThemeContext.Provider value={{ colors, isDark, setDark, toggleDark }}>
       {children}
     </ThemeContext.Provider>
   );
