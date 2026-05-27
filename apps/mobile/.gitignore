@@ -1,0 +1,20 @@
+# Pastas nativas geradas pelo expo prebuild (regeneraveis)
+/android
+/ios
+
+# Keystores e segredos — NUNCA versionar
+*.keystore
+*.jks
+.env
+.env.*
+!.env.example
+
+# Expo / build
+.expo/
+dist/
+web-build/
+node_modules/
+
+# Backup de assets
+*-original.jpg
+*-original.png
