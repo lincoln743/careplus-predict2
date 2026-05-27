@@ -1,0 +1,13 @@
+# Build e serve do dashboard web (Vite estatico) no Railway.
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+# serve o dist/ em modo SPA (-s: fallback p/ index.html nas rotas do react-router)
+cmd = "npx serve -s dist -l $PORT"
