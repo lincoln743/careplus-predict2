@@ -68,7 +68,7 @@ await app.register(anamneseRoutes);
 await app.register(wearableRoutes);
 await app.register(observabilityRoutes);
 
-const port = env.API_PORT;
+const port = env.PORT ?? env.API_PORT;
 app
   .listen({ port, host: "0.0.0.0" })
   .then(() => app.log.info(`Backend no ar em :${port}`))

@@ -1,0 +1,10 @@
+# Build do backend CarePlus no Railway.
+# argon2 compila binario nativo -> precisa de build tools (gcc/make/python).
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[start]
+cmd = "npx tsx src/server.ts"
