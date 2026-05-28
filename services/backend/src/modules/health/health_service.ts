@@ -48,6 +48,9 @@ export interface SerieSaude {
 
 export async function seriePorChave(chave: string, periodo: string): Promise<SerieSaude> {
   const dias = diasDoPeriodo(periodo);
+  if (chave.startsWith("real:")) {
+    return (await buscarSeriePorChave(chave, dias)) as SerieSaude;
+  }
 
   // 1. Acha o paciente simulado pela chave.
   const { data: paciente, error: errP } = await supabase
