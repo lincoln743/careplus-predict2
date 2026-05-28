@@ -6,6 +6,8 @@ const NAV = [
   { to: "/", rotulo: "Visão Geral", icone: "M3 12l9-9 9 9M5 10v10h14V10" },
   { to: "/pacientes", rotulo: "Pacientes", icone: "M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M12 7a3 3 0 100-6 3 3 0 000 6z" },
   { to: "/metricas", rotulo: "Métricas", icone: "M4 19V5M4 19h16M8 15l3-3 3 2 4-5" },
+  { to: "/prescricoes", rotulo: "Prescrições", icone: "M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V18a2 2 0 01-2 2z" },
+  { to: "/ia-medico", rotulo: "IA do Médico", icone: "M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H6a2 2 0 01-2-2v-1H3a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

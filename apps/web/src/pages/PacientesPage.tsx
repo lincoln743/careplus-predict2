@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import { listarPacientes, buscarSerie, type PacienteResumo, type SerieSaude } from "../api/client";
+import { listarPacientesFull, buscarSerie, type PacienteResumoFull, type SerieSaude } from "../api/client";
+import { useNavigate } from "react-router-dom";
 import { Card, tituloPagina, badgeRisco } from "../components/Card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export function PacientesPage() {
-  const [pacientes, setPacientes] = useState<PacienteResumo[]>([]);
+  const navigate = useNavigate();
+  const [pacientes, setPacientes] = useState<PacienteResumoFull[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [serie, setSerie] = useState<SerieSaude | null>(null);
   const [periodo, setPeriodo] = useState("30d");
 
   useEffect(() => {
-    listarPacientes().then((r) => {
+    listarPacientesFull().then((r) => {
       setPacientes(r.pacientes);
       if (r.pacientes[0]) setSel(r.pacientes[0].chave);
     }).catch(() => {});
@@ -51,10 +53,23 @@ export function PacientesPage() {
               <Card style={{ padding: 24, marginBottom: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600 }}>{pacienteSel.nome}</h2>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600 }}>{pacienteSel.nome}</h2>
+                      {pacienteSel.is_real && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--success)", background: "color-mix(in srgb, var(--success) 14%, transparent)", padding: "3px 9px", borderRadius: 20 }}>
+                          REAL · {pacienteSel.origem ?? "wearable"}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "center" }}>
-                      <span style={{ color: "var(--text-muted)", fontSize: 13 }}>{pacienteSel.idade} anos</span>
+                      <span style={{ color: "var(--text-muted)", fontSize: 13 }}>{pacienteSel.idade ? pacienteSel.idade + " anos" : "idade —"}</span>
                       {badgeRisco(pacienteSel.perfil_risco)}
+                      {pacienteSel.is_real && pacienteSel.chave.startsWith("real:") && (
+                        <button onClick={() => navigate(`/anamnese/${pacienteSel.chave.slice(5)}`)}
+                          style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "var(--brand-light)", padding: "4px 12px", borderRadius: 20 }}>
+                          Ver anamnese →
+                        </button>
+                      )}
                       {serie?.is_simulated && <span style={{ fontSize: 11, color: "var(--text-muted)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 20 }}>simulado</span>}
                     </div>
                   </div>

@@ -5,6 +5,9 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PacientesPage } from "./pages/PacientesPage";
 import { MetricasPage } from "./pages/MetricasPage";
+import { AnamnesePage } from "./pages/AnamnesePage";
+import { PrescricoesPage } from "./pages/PrescricoesPage";
+import { IAMedicoPage } from "./pages/IAMedicoPage";
 
 function Protegida({ children }: { children: React.ReactNode }) {
   const { user, carregando } = useAuth();
@@ -21,6 +24,9 @@ function Rotas() {
       <Route path="/" element={<Protegida><DashboardPage /></Protegida>} />
       <Route path="/pacientes" element={<Protegida><PacientesPage /></Protegida>} />
       <Route path="/metricas" element={<Protegida><MetricasPage /></Protegida>} />
+      <Route path="/anamnese/:userId" element={<Protegida><AnamnesePage /></Protegida>} />
+      <Route path="/prescricoes" element={<Protegida><PrescricoesPage /></Protegida>} />
+      <Route path="/ia-medico" element={<Protegida><IAMedicoPage /></Protegida>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
