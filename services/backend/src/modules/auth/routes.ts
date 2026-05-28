@@ -33,15 +33,19 @@ const cookieOpts = {
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post("/auth/register", async (req, reply) => {
     const body = registerSchema.parse(req.body);
-    const user = await authService.registrar({
+    const result = await authService.registrar({
       email: body.email,
       senha: body.senha,
       nome: body.nome,
       role: body.role,
       crm: body.crm,
       especialidade: body.especialidade,
+      aceite_termos: (body as { aceite_termos?: boolean }).aceite_termos,
+      ip_origem: req.ip,
     });
-    return reply.code(201).send({ user });
+    // Login automatico apos cadastro
+    reply.setCookie(COOKIE_NAME, result.refreshToken, cookieOpts);
+    return reply.code(201).send({ user: result.user, accessToken: result.accessToken });
   });
 
   fastify.post("/auth/login", async (req, reply) => {

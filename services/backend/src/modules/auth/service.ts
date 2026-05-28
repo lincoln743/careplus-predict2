@@ -38,6 +38,8 @@ export interface RegisterInput {
   role?: Role;
   crm?: string;
   especialidade?: string;
+  aceite_termos?: boolean; // se true, grava consentimento LGPD em consents
+  ip_origem?: string;      // capturada no handler (req.ip)
 }
 
 export async function registrar(input: RegisterInput) {
@@ -73,7 +75,21 @@ export async function registrar(input: RegisterInput) {
   }
 
   await auditar(data.id, "user.registered", "user", data.id, { role: data.role });
-  return data;
+
+  // LGPD: se o usuario aceitou os termos, grava o consentimento (versao v1).
+  if (input.aceite_termos === true) {
+    await supabase.from("consents").insert({
+      user_id: data.id,
+      tipo: "termos_uso",
+      versao_termo: "v1",
+      concedido: true,
+      ip_origem: input.ip_origem ?? null,
+    });
+  }
+
+  // Emite tokens ja no cadastro (login automatico apos register).
+  const tokens = await emitirTokens(data);
+  return { user: data, ...tokens };
 }
 
 async function emitirTokens(user: Pick<UserRow, "id" | "email" | "role">) {
