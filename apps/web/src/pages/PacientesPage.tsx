@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { listarPacientesFull, buscarSerie, type PacienteResumoFull, type SerieSaude } from "../api/client";
+import { listarPacientesFull, buscarSerie, buscarAnamneseSchema, buscarAnamneseDe, type PacienteResumoFull, type SerieSaude } from "../api/client";
+import { gerarRelatorioPDF } from "../lib/gerarRelatorio";
 import { useNavigate } from "react-router-dom";
 import { Card, tituloPagina, badgeRisco } from "../components/Card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -10,6 +11,7 @@ export function PacientesPage() {
   const [sel, setSel] = useState<string | null>(null);
   const [serie, setSerie] = useState<SerieSaude | null>(null);
   const [periodo, setPeriodo] = useState("30d");
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   useEffect(() => {
     listarPacientesFull().then((r) => {
@@ -23,6 +25,34 @@ export function PacientesPage() {
   }, [sel, periodo]);
 
   const pacienteSel = pacientes.find((p) => p.chave === sel);
+
+  async function gerarRelatorio() {
+    if (!pacienteSel) return;
+    setGerandoPdf(true);
+    try {
+      let anamneseSchema = null;
+      let anamneseRespostas = null;
+      // So pacientes reais tem anamnese vinculada (chave real:<userId>)
+      if (pacienteSel.is_real && pacienteSel.chave.startsWith("real:")) {
+        const userId = pacienteSel.chave.slice(5);
+        try {
+          const [sc, an] = await Promise.all([buscarAnamneseSchema(), buscarAnamneseDe(userId)]);
+          anamneseSchema = sc;
+          anamneseRespostas = an.anamnese?.respostas ?? null;
+        } catch { /* sem anamnese, segue sem ela */ }
+      }
+      gerarRelatorioPDF({
+        nome: pacienteSel.nome,
+        origem: pacienteSel.origem,
+        isReal: pacienteSel.is_real,
+        serie,
+        anamneseSchema,
+        anamneseRespostas,
+      });
+    } finally {
+      setGerandoPdf(false);
+    }
+  }
 
   return (
     <div className="fade-in">
@@ -73,7 +103,7 @@ export function PacientesPage() {
                       {serie?.is_simulated && <span style={{ fontSize: 11, color: "var(--text-muted)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 20 }}>simulado</span>}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     {["7d", "30d", "90d"].map((p) => (
                       <button key={p} onClick={() => setPeriodo(p)} style={{
                         padding: "7px 13px", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
@@ -81,6 +111,14 @@ export function PacientesPage() {
                         color: periodo === p ? "#fff" : "var(--text-muted)",
                       }}>{p}</button>
                     ))}
+                    <button onClick={gerarRelatorio} disabled={gerandoPdf || !serie}
+                      style={{
+                        marginLeft: 8, padding: "7px 14px", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
+                        background: "var(--success)", color: "#fff", display: "flex", alignItems: "center", gap: 6,
+                        opacity: gerandoPdf || !serie ? 0.6 : 1,
+                      }}>
+                      {gerandoPdf ? "Gerando…" : "⬇ Relatório PDF"}
+                    </button>
                   </div>
                 </div>
                 {serie && (
