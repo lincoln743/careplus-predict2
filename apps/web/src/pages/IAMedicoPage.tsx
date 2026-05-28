@@ -5,7 +5,7 @@ import {
 } from "../api/client";
 import { Card, tituloPagina } from "../components/Card";
 
-interface Msg { autor: "voce" | "ia"; texto: string; fontes?: { titulo: string; trecho: string }[]; }
+interface Msg { autor: "voce" | "ia"; texto: string; fontes?: string[]; }
 
 export function IAMedicoPage() {
   const [docs, setDocs] = useState<RagDoc[]>([]);
@@ -81,7 +81,7 @@ export function IAMedicoPage() {
                 </div>
                 {m.fontes && m.fontes.length > 0 && (
                   <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
-                    Fontes: {m.fontes.map((f) => f.titulo).join(", ")}
+                    Fontes: {m.fontes.join(", ")}
                   </div>
                 )}
               </div>

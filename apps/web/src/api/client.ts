@@ -160,7 +160,8 @@ export const removerRagDoc = (id: string) =>
   api<{ ok: boolean }>(`/rag/documents/${id}`, { method: "DELETE" });
 export interface RagQueryResp {
   resposta: string;
-  fontes?: { titulo: string; trecho: string }[];
+  fontes?: string[];
+  thread_id?: string;
 }
 export const perguntarRag = (pergunta: string) =>
   api<RagQueryResp>("/rag/query", { method: "POST", body: { pergunta } });
