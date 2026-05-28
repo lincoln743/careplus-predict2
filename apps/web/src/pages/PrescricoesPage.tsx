@@ -10,14 +10,14 @@ export function PrescricoesPage() {
 
   function carregar() {
     setCarregando(true);
-    listarPrescricoes("pendente")
-      .then((r) => setLista(r.prescricoes ?? []))
+    listarPrescricoes()
+      .then((r) => setLista(r.pendentes ?? []))
       .catch(() => setErro("Não foi possível carregar a fila de prescrições."))
       .finally(() => setCarregando(false));
   }
   useEffect(carregar, []);
 
-  async function decidir(id: string, decisao: "aprovada" | "rejeitada") {
+  async function decidir(id: string, decisao: "aprovar" | "recusar") {
     setProcessando(id);
     try {
       await revisarPrescricao(id, decisao);
@@ -69,11 +69,11 @@ export function PrescricoesPage() {
                 {resumoSugestao(p.sugestao)}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => decidir(p.id, "aprovada")} disabled={processando === p.id}
+                <button onClick={() => decidir(p.id, "aprovar")} disabled={processando === p.id}
                   style={{ flex: 1, padding: "11px", borderRadius: "var(--radius-sm)", background: "var(--success)", color: "#fff", fontWeight: 600 }}>
                   Aprovar
                 </button>
-                <button onClick={() => decidir(p.id, "rejeitada")} disabled={processando === p.id}
+                <button onClick={() => decidir(p.id, "recusar")} disabled={processando === p.id}
                   style={{ flex: 1, padding: "11px", borderRadius: "var(--radius-sm)", background: "transparent", color: "var(--danger)", fontWeight: 600, border: "1px solid var(--danger)" }}>
                   Rejeitar
                 </button>

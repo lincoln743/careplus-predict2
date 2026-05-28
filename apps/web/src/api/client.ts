@@ -137,10 +137,11 @@ export interface Prescricao {
   observacao_medico: string | null;
   criado_em: string;
 }
-export const listarPrescricoes = (status?: string) =>
-  api<{ prescricoes: Prescricao[] }>(`/ai/prescriptions${status ? `?status=${status}` : ""}`);
-export const revisarPrescricao = (id: string, decisao: "aprovada" | "rejeitada", observacao?: string) =>
-  api<{ prescricao: Prescricao }>(`/ai/prescriptions/${id}/revisar`, {
+export const listarPrescricoes = () =>
+  api<{ pendentes: Prescricao[] }>("/ai/prescriptions");
+// decisao no backend: "aprovar" | "editar" | "recusar"
+export const revisarPrescricao = (id: string, decisao: "aprovar" | "recusar", observacao?: string) =>
+  api<unknown>(`/ai/prescriptions/${id}/review`, {
     method: "POST",
     body: { decisao, observacao },
   });
@@ -168,8 +169,9 @@ export const perguntarRag = (pergunta: string) =>
 export async function uploadRagPdf(titulo: string, arquivo: File): Promise<RagDoc> {
   const token = localStorage.getItem("cp_token");
   const fd = new FormData();
+  // titulo precisa vir ANTES do arquivo (o backend le file.fields.titulo do multipart stream)
   fd.append("titulo", titulo);
-  fd.append("arquivo", arquivo);
+  fd.append("file", arquivo);
   const res = await fetch(`${API_BASE_URL}/rag/documents`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
