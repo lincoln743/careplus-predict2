@@ -1,7 +1,7 @@
 /**
  * Navegacao principal (apos login). Tabs com icones, adaptadas ao papel.
- * - paciente: Inicio, Meus Dados, Metricas, Chat IA, Config, Sobre
- * - medico: Inicio (dashboard), Pacientes, Metricas, IA Medico, Config, Sobre
+ * - paciente: Inicio, Metricas, Chat IA, Config (4 tabs)
+ * - medico: Inicio, Pacientes, Metricas, IA Medico, Config (5 tabs)
  */
 import React from "react";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
@@ -12,9 +12,7 @@ import { useAuth } from "./store/auth";
 import { HomeScreen } from "./screens/HomeScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { ChatScreen } from "./screens/ChatScreen";
-import { MeusDadosScreen } from "./screens/MeusDadosScreen";
 import { MetricasScreen } from "./screens/MetricasScreen";
-import { SobreScreen } from "./screens/SobreScreen";
 import { MedicoDashboard } from "./screens/MedicoDashboard";
 import { MedicoPacientes } from "./screens/MedicoPacientes";
 import { MedicoMetricas } from "./screens/MedicoMetricas";
@@ -79,13 +77,11 @@ export function AppNavigator() {
         ) : (
           <>
             <Tab.Screen name="Início" component={HomeScreen} />
-            <Tab.Screen name="Meus Dados" component={MeusDadosScreen} />
             <Tab.Screen name="Métricas" component={MetricasScreen} />
             <Tab.Screen name="Chat IA" component={ChatScreen} />
             <Tab.Screen name="Config" component={SettingsScreen} />
           </>
         )}
-        <Tab.Screen name="Sobre" component={SobreScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );

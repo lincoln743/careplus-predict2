@@ -1,111 +1,166 @@
 /**
- * Configuracoes do MEDICO — completa, fiel a V1.
- * Informacoes Profissionais + Notificacoes + Funcionalidades + Modo Simulado + Sair.
- * Switches persistem; itens sem efeito real marcados "em breve".
+ * Config (medico) - mesmo layout do paciente: 3 chips de tema + 4 cards + Sair + footer.
  */
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Pressable, StyleSheet, ScrollView, Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useTheme } from "../theme/ThemeProvider";
-import { spacing, radius, font } from "../theme/tokens";
+import { useTheme, type ThemeName } from "../theme/ThemeProvider";
 import { useAuth } from "../store/auth";
 import { useSimulation } from "../store/simulation";
+import { spacing, radius, font } from "../theme/tokens";
+import { GlassCard } from "../components/GlassCard";
+import { MedicoMeusDadosScreen } from "./settings/MedicoMeusDadosScreen";
+import { NotificacoesScreen } from "./settings/NotificacoesScreen";
+import { PrivacidadeScreen } from "./settings/PrivacidadeScreen";
+import { SobreWrap } from "./settings/SobreWrap";
 
-function usePersistedSwitch(key: string, inicial: boolean) {
-  const [val, setVal] = useState(inicial);
-  useEffect(() => { AsyncStorage.getItem(key).then((v) => { if (v !== null) setVal(v === "1"); }); }, []);
-  const set = (v: boolean) => { setVal(v); AsyncStorage.setItem(key, v ? "1" : "0"); };
-  return [val, set] as const;
-}
+type Sub = null | "meusdados" | "notificacoes" | "privacidade" | "sobre";
 
-function LinhaSwitch({ titulo, valor, onValor, emBreve }: { titulo: string; valor: boolean; onValor: (v: boolean) => void; emBreve?: boolean }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.switchLinha}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flex: 1 }}>
-        <Text style={[styles.itemLabel, { color: colors.text }]}>{titulo}</Text>
-        {emBreve && <Text style={[styles.emBreve, { color: colors.warning, borderColor: colors.warning }]}>em breve</Text>}
-      </View>
-      <Switch value={valor} onValueChange={onValor} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
-    </View>
-  );
-}
+const TEMAS: Array<{ id: ThemeName; label: string; icon: any }> = [
+  { id: "escuro",    label: "Escuro",    icon: "moon" },
+  { id: "claro",     label: "Claro",     icon: "sunny" },
+  { id: "futurista", label: "Futurista", icon: "planet" },
+];
 
 export function MedicoConfig() {
-  const { colors, isDark, toggleDark } = useTheme();
-  const { logout, user } = useAuth();
-  const { ativo, toggle } = useSimulation();
+  const { colors, theme, setTheme } = useTheme();
+  const { logout } = useAuth();
+  const { ativo: simAtivo, toggle: simToggle } = useSimulation();
   const insets = useSafeAreaInsets();
+  const [sub, setSub] = useState<Sub>(null);
 
-  const [alertas, setAlertas] = usePersistedSwitch("@cp/med_alertas", true);
-  const [notPac, setNotPac] = usePersistedSwitch("@cp/med_notpac", true);
-  const [relat, setRelat] = usePersistedSwitch("@cp/med_relat", true);
-  const [agenda, setAgenda] = usePersistedSwitch("@cp/med_agenda", false);
-  const [tele, setTele] = usePersistedSwitch("@cp/med_tele", true);
-  const [export_, setExport] = usePersistedSwitch("@cp/med_export", false);
+  if (sub === "meusdados")    return <MedicoMeusDadosScreen onVoltar={() => setSub(null)} />;
+  if (sub === "notificacoes") return <NotificacoesScreen onVoltar={() => setSub(null)} />;
+  if (sub === "privacidade")  return <PrivacidadeScreen onVoltar={() => setSub(null)} />;
+  if (sub === "sobre")        return <SobreWrap onVoltar={() => setSub(null)} />;
+
+  const itens: Array<{ id: Exclude<Sub, null>; label: string; icon: any; sub: string }> = [
+    { id: "meusdados",    icon: "person-circle",      label: "Meus Dados",                    sub: "Perfil profissional, CRM" },
+    { id: "notificacoes", icon: "notifications",      label: "Notificações",                  sub: "Push, plantões, alertas" },
+    { id: "privacidade",  icon: "lock-closed",        label: "Privacidade & Consentimento",   sub: "LGPD, exportar dados, termos" },
+    { id: "sobre",        icon: "information-circle", label: "Sobre o CarePlus Predict",      sub: "Versão, equipe, suporte" },
+  ];
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}>
-      <Text style={[styles.titulo, { color: colors.primary }]}>Configurações</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{
+        padding: spacing.md,
+        paddingTop: insets.top + spacing.md,
+        paddingBottom: insets.bottom + spacing.xl,
+      }}
+    >
+      <Text style={[styles.tituloPagina, { color: colors.primary }]}>Config</Text>
 
-      {/* Informacoes Profissionais */}
-      <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
-        <View style={styles.headerLinha}><Ionicons name="person-circle-outline" size={20} color={colors.primary} /><Text style={[styles.blocoTitulo, { color: colors.primary }]}>Informações Profissionais</Text></View>
-        <Text style={[styles.nome, { color: colors.text }]}>{user?.nome ?? "Dr."}</Text>
-        <Text style={[styles.prof, { color: colors.textMuted }]}>{user?.especialidade ?? "Cardiologista"} | CRM {user?.crm ?? "—"}</Text>
-        <Text style={[styles.prof, { color: colors.textMuted }]}>Hospital CarePlus - Unidade Paulista</Text>
-        <Pressable style={styles.linkAcao} onPress={() => Alert.alert("Editar Informações", "Funcionalidade em breve.")}><Ionicons name="create-outline" size={16} color={colors.primary} /><Text style={[styles.linkText, { color: colors.primary }]}>Editar Informações</Text></Pressable>
-      </View>
+      <GlassCard style={styles.card}>
+        <Text style={[styles.bloqueTitulo, { color: colors.text }]}>Aparência</Text>
+        <View style={styles.tabsRow}>
+          {TEMAS.map((t) => {
+            const on = theme === t.id;
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => setTheme(t.id)}
+                style={[styles.temaBtn, {
+                  backgroundColor: on ? colors.surfaceAlt : "transparent",
+                  borderColor: on ? colors.primary : (colors.cardBorder ?? colors.border),
+                  shadowColor: on && colors.fx ? colors.glowColor : "transparent",
+                  shadowOpacity: on && colors.fx ? 0.6 : 0,
+                  shadowRadius: on && colors.fx ? 12 : 0,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: on && colors.fx ? 6 : 0,
+                }]}
+              >
+                <Ionicons name={t.icon} size={22} color={on ? colors.primary : colors.textMuted} />
+                <Text style={{ fontSize: font.size.xs, fontWeight: "600", color: on ? colors.text : colors.textMuted, marginTop: 6 }}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: font.size.xs, marginTop: spacing.md, lineHeight: 18 }}>
+          {theme === "futurista"
+            ? "Tema neon experimental — vidro, grade HUD e brilho."
+            : "Escolha a aparência do app. Futurista traz visual neon/HUD."}
+        </Text>
+      </GlassCard>
 
-      {/* Aparencia + Modo Simulado */}
-      <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
-        <View style={styles.headerLinha}><Ionicons name="color-palette-outline" size={18} color={colors.primary} /><Text style={[styles.blocoTitulo, { color: colors.primary }]}>Aparência</Text></View>
-        <LinhaSwitch titulo="Modo Escuro" valor={isDark} onValor={toggleDark} />
-        <View style={[styles.divisor, { borderTopColor: colors.border }]} />
-        <LinhaSwitch titulo="Modo Simulado" valor={ativo} onValor={toggle} />
-      </View>
+      <GlassCard style={styles.card}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.bloqueTitulo, { color: colors.text, marginBottom: 4 }]}>Modo Demo</Text>
+            <Text style={{ color: colors.textMuted, fontSize: font.size.xs, lineHeight: 18 }}>
+              Dashboard, Métricas e gauge usam 3 pacientes simulados pulsando a cada 5s. Desligado: dados reais do backend.
+            </Text>
+          </View>
+          <Switch
+            value={simAtivo}
+            onValueChange={simToggle}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
+      </GlassCard>
 
-      {/* Notificacoes */}
-      <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
-        <View style={styles.headerLinha}><Ionicons name="notifications-outline" size={18} color={colors.primary} /><Text style={[styles.blocoTitulo, { color: colors.primary }]}>Notificações</Text></View>
-        <LinhaSwitch titulo="Alertas críticos" valor={alertas} onValor={setAlertas} emBreve />
-        <LinhaSwitch titulo="Notificações de pacientes" valor={notPac} onValor={setNotPac} emBreve />
-        <LinhaSwitch titulo="Relatórios semanais" valor={relat} onValor={setRelat} emBreve />
-      </View>
+      <GlassCard style={{ ...styles.card, padding: 0 }}>
+        {itens.map((it, i) => (
+          <Pressable
+            key={it.id}
+            onPress={() => setSub(it.id)}
+            style={[styles.linha, i < itens.length - 1 ? { borderBottomWidth: 1, borderBottomColor: colors.border } : null]}
+          >
+            <View style={[styles.icoBg, { backgroundColor: colors.fx ? colors.surfaceAlt : `${colors.primary}1A` }]}>
+              <Ionicons name={it.icon} size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
+              <Text style={{ fontSize: font.size.md, color: colors.text }}>{it.label}</Text>
+              <Text style={{ fontSize: font.size.xs, color: colors.textMuted, marginTop: 2 }}>{it.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ))}
+      </GlassCard>
 
-      {/* Funcionalidades */}
-      <View style={[styles.bloco, { backgroundColor: colors.surface }]}>
-        <View style={styles.headerLinha}><Ionicons name="construct-outline" size={18} color={colors.primary} /><Text style={[styles.blocoTitulo, { color: colors.primary }]}>Funcionalidades</Text></View>
-        <LinhaSwitch titulo="Agendamento automático" valor={agenda} onValor={setAgenda} emBreve />
-        <LinhaSwitch titulo="Telemedicina" valor={tele} onValor={setTele} emBreve />
-        <LinhaSwitch titulo="Exportação de dados" valor={export_} onValor={setExport} emBreve />
-      </View>
-
-      <Pressable style={[styles.botaoSair, { backgroundColor: colors.danger }]} onPress={logout}>
-        <Ionicons name="log-out-outline" size={18} color="#fff" />
-        <Text style={{ color: "#fff", fontWeight: font.weight.semibold, fontSize: font.size.md }}>Sair da conta</Text>
+      <Pressable
+        onPress={() => logout()}
+        style={({ pressed }) => [styles.sairBtn, {
+          backgroundColor: pressed ? `${colors.danger}22` : "transparent",
+          borderColor: colors.danger,
+        }]}
+        hitSlop={8}
+      >
+        <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+        <Text style={{ color: colors.danger, fontSize: font.size.md, fontWeight: "600", marginLeft: 8 }}>
+          Sair
+        </Text>
       </Pressable>
+
+      <Text style={[styles.footer, { color: colors.textMuted }]}>
+        CarePlus Predict · Part of Bupa · v2.0
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg },
-  titulo: { fontSize: font.size.xxl, fontWeight: font.weight.bold, marginBottom: spacing.lg },
-  bloco: { borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg },
-  headerLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
-  blocoTitulo: { fontSize: font.size.lg, fontWeight: font.weight.semibold },
-  nome: { fontSize: font.size.lg, fontWeight: font.weight.bold },
-  prof: { fontSize: font.size.sm, marginTop: 2 },
-  itemLabel: { fontSize: font.size.md },
-  segment: { flexDirection: "row", borderWidth: 1, borderRadius: radius.md, overflow: "hidden" },
-  segmentItem: { flex: 1, paddingVertical: spacing.md, alignItems: "center" },
-  divisor: { borderTopWidth: 1, marginVertical: spacing.md },
-  switchLinha: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm },
-  emBreve: { fontSize: 10, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 1, overflow: "hidden" },
-  linkAcao: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.sm, marginTop: spacing.sm },
-  linkText: { fontSize: font.size.md, fontWeight: font.weight.medium },
-  botaoSair: { flexDirection: "row", gap: spacing.sm, borderRadius: radius.md, padding: spacing.md, alignItems: "center", justifyContent: "center" },
+  tituloPagina: { fontSize: 28, fontWeight: "700", letterSpacing: -0.5, marginBottom: spacing.md, marginTop: spacing.md },
+  card: { padding: spacing.lg, marginBottom: spacing.md },
+  bloqueTitulo: { fontSize: font.size.lg, fontWeight: "600", marginBottom: spacing.md },
+  tabsRow: { flexDirection: "row", gap: spacing.sm },
+  temaBtn: { flex: 1, alignItems: "center", paddingVertical: 16, paddingHorizontal: 8, borderRadius: radius.lg, borderWidth: 1.5 },
+  linha: { flexDirection: "row", alignItems: "center", padding: spacing.md },
+  icoBg: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  footer: { textAlign: "center", fontSize: font.size.xs, marginTop: spacing.md },
+  sairBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    marginTop: spacing.lg,
+  },
 });

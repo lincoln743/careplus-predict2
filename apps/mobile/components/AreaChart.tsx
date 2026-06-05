@@ -42,6 +42,27 @@ function splinePath(pts: { x: number; y: number }[]): string {
 
 export function AreaChart({ valores, labels, titulo, cor, altura = 200, formatY }: Props) {
   const { colors } = useTheme();
+  const anim = useRef(new Animated.Value(0)).current;
+
+  // Animacao de entrada (hook chamado antes do early return — ordem consistente)
+  useEffect(() => {
+    if (!valores || valores.length === 0) return;
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, [valores?.join(",")]);
+
+  // Guard contra dados vazios — evita crash em pts[-1].x quando backend ainda nao respondeu
+  if (!valores || valores.length === 0) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={[styles.titulo, { color: colors.text }]}>{titulo}</Text>
+        <View style={[styles.card, { padding: 20, alignItems: "center", minHeight: altura, justifyContent: "center" }]}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>Sem dados no periodo</Text>
+        </View>
+      </View>
+    );
+  }
+
   const W = 320;
   const H = altura;
   const padL = 52, padR = 16, padT = 16, padB = 28;
@@ -73,12 +94,6 @@ export function AreaChart({ valores, labels, titulo, cor, altura = 200, formatY 
 
   const fmt = formatY ?? ((v: number) => Math.round(v).toLocaleString("pt-BR"));
 
-  // Animacao de entrada (fade + leve subida).
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    anim.setValue(0);
-    Animated.timing(anim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-  }, [valores.join(",")]);
 
   return (
     <View style={styles.wrap}>
