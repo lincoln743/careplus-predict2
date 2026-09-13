@@ -1,0 +1,21 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.careplus.samsunghealth'
+version = '0.0.1'
+
+android {
+  namespace 'com.careplus.samsunghealth'
+  compileSdk rootProject.ext.compileSdkVersion
+  defaultConfig {
+    minSdk 29
+  }
+  buildFeatures { buildConfig false }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  // Precisa do AAR Samsung disponivel em tempo de compilacao do modulo tambem.
+  // O AAR esta em apps/mobile/android/app/libs/ — caminho relativo a partir deste build.gradle.
+  compileOnly files('../../../android/app/libs/samsung-health-data-api-1.1.0.aar')
+}

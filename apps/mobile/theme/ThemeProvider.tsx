@@ -1,46 +1,72 @@
 /**
- * ThemeProvider: gerencia o tema com APENAS dois estados — claro e escuro.
- * (Sem "seguir o sistema".) Padrao inicial: escuro (dark-first, identidade V1).
- * A preferencia e salva localmente e restaurada ao abrir.
+ * ThemeProvider: gerencia 3 temas — "escuro" | "claro" | "futurista".
+ * Mantem isDark / setDark / toggleDark como derivados para nao quebrar
+ * componentes existentes (toggle altera somente entre claro<->escuro).
  */
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { darkColors, lightColors, type ThemeColors } from "./tokens";
+import { darkColors, lightColors, futuristaColors, type ThemeColors } from "./tokens";
+
+export type ThemeName = "escuro" | "claro" | "futurista";
 
 interface ThemeContextValue {
   colors: ThemeColors;
+  theme: ThemeName;
+  setTheme: (t: ThemeName) => void;
+  // compat com codigo existente:
   isDark: boolean;
   setDark: (v: boolean) => void;
   toggleDark: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
-const STORAGE_KEY = "@careplus/dark-mode";
+const STORAGE_KEY = "@careplus/theme-v2";
+const LEGACY_KEY  = "@careplus/dark-mode";
+
+const ALL: Record<ThemeName, ThemeColors> = {
+  escuro: darkColors,
+  claro: lightColors,
+  futurista: futuristaColors,
+};
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Padrao: escuro. Restaura a preferencia salva ao abrir.
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const [theme, setThemeState] = useState<ThemeName>("escuro");
 
+  // Carrega preferencia salva (com migracao do formato antigo)
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((saved) => {
-      if (saved === "0") setIsDark(false);
-      else if (saved === "1") setIsDark(true);
-    });
+    (async () => {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved === "escuro" || saved === "claro" || saved === "futurista") {
+        setThemeState(saved); return;
+      }
+      // migracao do booleano legado
+      const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+      if (legacy === "0") setThemeState("claro");
+      else if (legacy === "1") setThemeState("escuro");
+    })();
   }, []);
 
+  function setTheme(t: ThemeName) {
+    setThemeState(t);
+    AsyncStorage.setItem(STORAGE_KEY, t);
+  }
+
+  // Compat: isDark e true para "escuro" e "futurista"
+  const isDark = theme !== "claro";
+
   function setDark(v: boolean) {
-    setIsDark(v);
-    AsyncStorage.setItem(STORAGE_KEY, v ? "1" : "0");
+    setTheme(v ? "escuro" : "claro");
   }
 
   function toggleDark() {
-    setDark(!isDark);
+    // ignora futurista — so alterna claro <-> escuro
+    setDark(!(theme !== "claro"));
   }
 
-  const colors = isDark ? darkColors : lightColors;
+  const colors = ALL[theme];
 
   return (
-    <ThemeContext.Provider value={{ colors, isDark, setDark, toggleDark }}>
+    <ThemeContext.Provider value={{ colors, theme, setTheme, isDark, setDark, toggleDark }}>
       {children}
     </ThemeContext.Provider>
   );

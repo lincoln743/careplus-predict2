@@ -40,3 +40,14 @@ coverage/
 # Supabase local
 .branches/
 .temp/
+
+# Android signing keys — NUNCA commitar
+*.keystore
+*.jks
+keystore.properties
+
+# Sensitive build credentials (NEVER COMMIT)
+/apps/mobile/credentials/
+
+# Backups locais de edicao
+*.bak

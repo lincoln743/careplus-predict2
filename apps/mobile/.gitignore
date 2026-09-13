@@ -18,3 +18,8 @@ node_modules/
 # Backup de assets
 *-original.jpg
 *-original.png
+
+# Artefatos de build dos modulos nativos (regeneraveis)
+modules/*/android/.gradle/
+modules/*/android/build/
+modules/*/android/.cxx/

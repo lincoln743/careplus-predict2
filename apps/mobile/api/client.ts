@@ -116,3 +116,32 @@ export interface SerieSaude {
 export async function buscarMinhaSerie(periodo = "7d"): Promise<SerieSaude> {
   return apiRequest<SerieSaude>(`/health/me/series?periodo=${periodo}`, { auth: true });
 }
+
+// ============================================================
+// Wearable — envio de leituras Samsung Health para o backend
+// ============================================================
+export interface LeituraSamsung {
+  data_ref: string;       // YYYY-MM-DD
+  passos?: number | null;
+  fc_media?: number | null;
+  fc_min?: number | null;
+  fc_max?: number | null;
+  sono_horas?: number | null;
+}
+
+export interface RespostaEnvioLeituras {
+  gravadas: number;
+}
+
+/**
+ * Envia leituras Samsung Health (em lote) para o backend. Marca origem.
+ * Usa o endpoint que ja recebe leituras reais (POST /wearable/readings).
+ */
+export async function enviarLeiturasSamsung(leituras: LeituraSamsung[]): Promise<RespostaEnvioLeituras> {
+  return apiRequest<RespostaEnvioLeituras>("/wearable/readings", {
+    method: "POST",
+    body: { leituras: leituras.map(l => ({ ...l, origem: "samsung_health" })) },
+    auth: true,
+  });
+}
+

@@ -15,6 +15,17 @@ const config: ExpoConfig = {
     package: "com.careplus.predict",
     softwareKeyboardLayoutMode: "pan",
   },
+  plugins: [
+    [
+      "expo-build-properties",
+      {
+        android: {
+          minSdkVersion: 29,
+        },
+      },
+    ],
+    "./plugins/withSamsung.js",
+  ],
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
   },
