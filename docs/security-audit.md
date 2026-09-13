@@ -18,7 +18,7 @@ Escala: **crítico** (explorável com dano direto a paciente ou ao sistema) · *
 |---|---|---|---|
 | 1 | crítico | APKs de release assinados com a chave pública de debug | ✅ corrigido |
 | 2 | crítico | Red flags cardiovasculares nunca disparavam | ✅ corrigido |
-| 3 | alto | Senha do keystore em arquivo versionável | ✅ corrigido antes de vazar |
+| 3 | alto | Senha do keystore em arquivo versionável, depois exposta por este próprio documento | ⚠️ código corrigido; senha no histórico do git — rotacionar |
 | 4 | alto | `NODE_ENV=development` em produção → cookie de refresh sem `secure` | 🔴 aberto |
 | 5 | médio | Rate limit global, sem limite específico em `/auth/login` | 🔴 aberto |
 | 6 | médio | CORS com `origin: true` (reflete qualquer origem) | 🔴 aberto |
@@ -113,19 +113,36 @@ dispara de forma determinística**.
 
 ---
 
-## 3. alto — Senha do keystore em arquivo versionável ✅
+## 3. alto — Senha do keystore exposta ⚠️
 
-`apps/mobile/plugins/withSamsung.js` embutia `storePassword 'careplus123'` no código. O arquivo
+`apps/mobile/plugins/withSamsung.js` embutia a senha do keystore em texto puro (`storePassword '...'`) no código. O arquivo
 **não** estava coberto pelo `.gitignore` — o `/apps/mobile/credentials/` protegia a keystore em si,
 mas não o plugin que continha a senha dela.
 
-Detectado numa varredura pré-commit. **Nunca chegou a ser publicado**, então não houve vazamento e
-não é necessário rotacionar. As credenciais passaram para
-`apps/mobile/credentials/keystore.properties` (ignorado), com modelo em
+Detectado numa varredura pré-commit — o código com a senha nunca chegou a ser publicado. As
+credenciais passaram para `apps/mobile/credentials/keystore.properties` (ignorado), com modelo em
 `apps/mobile/keystore.properties.example`.
 
-**Lição de processo:** proteger o diretório de segredos não basta se o código que os consome
-também os contém. Vale uma varredura de segredos no CI (ver P3).
+**Porém, a senha foi exposta depois, por este próprio documento.** A primeira versão desta
+auditoria citava o valor literal ao descrever o achado, e foi publicada no repositório público em
+13/09/2026 (commit `ffbdd09`). O valor foi redigido em seguida, mas **permanece no histórico do
+git**.
+
+**Exposição real:** baixa, mas não nula. A senha sozinha não assina nada — `careplus-release.keystore`
+nunca foi versionado e existe apenas no disco do desenvolvedor e no backup. Um atacante precisaria
+do arquivo **e** da senha.
+
+**Correção recomendada:** regenerar o keystore com uma senha nova. O custo é praticamente zero neste
+momento específico, e essa janela não se repete: como o achado nº 1 mostrou, **nenhum APK
+distribuído foi assinado com esse keystore** — todos usaram a chave de debug. Não há instalação em
+campo cuja assinatura precise ser preservada. Depois que o v17 for distribuído, trocar o keystore
+passa a exigir desinstalação em todos os aparelhos.
+
+**Lição de processo — duas:**
+1. Proteger o diretório de segredos não basta se o código que os consome também os contém.
+2. Documento de segurança é superfície de vazamento como qualquer outro. Achado se descreve pela
+   forma (`storePassword '...'`), nunca pelo valor. Uma varredura de segredos no CI (ver P3) teria
+   pegado os dois casos.
 
 ---
 
