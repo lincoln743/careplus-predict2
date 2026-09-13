@@ -27,11 +27,33 @@ login() { # email -> accessToken
   | python3 -c "import sys,json;print(json.load(sys.stdin).get('accessToken',''))"
 }
 
-chat() { # token, mensagem
+chat() { # token, mensagem — triagem do PACIENTE
   curl -s -m 180 -X POST "$API/ai/chat" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $1" \
     -d "$(python3 -c "import json,sys;print(json.dumps({'mensagem':sys.argv[1]}))" "$2")"
+}
+
+rag() { # token, pergunta — IA do MEDICO (base de conhecimento)
+  curl -s -m 180 -X POST "$API/rag/query" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $1" \
+    -d "$(python3 -c "import json,sys;print(json.dumps({'pergunta':sys.argv[1]}))" "$2")"
+}
+
+resumo_rag() {
+  python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print('      resposta nao-JSON'); raise SystemExit
+if 'code' in d and 'message' in d:
+    print(f\"      ERRO: {d['code']} — {d['message']}\"); raise SystemExit
+print(f\"      fontes: {d.get('fontes')}\")
+r = (d.get('resposta') or '').replace(chr(10), ' ')
+print(f\"      \\\"{r[:150]}...\\\"\")
+"
 }
 
 resumo() { # json da resposta
@@ -81,7 +103,16 @@ for p in "${PROMPTS_PACIENTE[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Medico — consulta a base de conhecimento (perfil=medico).
+# Medico — consulta a base de conhecimento via RAG.
+#
+# ATENCAO: usa /rag/query, NAO /ai/chat. Sao caminhos diferentes de proposito:
+#   /ai/chat   -> pipeline de triagem da Blua, com persona de atendimento ao
+#                 paciente. E o que ChatScreen.tsx consome.
+#   /rag/query -> LLM puro sobre os documentos do medico, sem triagem. E o que
+#                 MedicoIA.tsx e o dashboard consomem.
+# Mandar o token do medico para /ai/chat faz a IA responder "como voce esta se
+# sentindo hoje?" para uma pergunta clinica — foi o que aconteceu na primeira
+# versao deste script.
 # ---------------------------------------------------------------------------
 TOK_MEDICO=$(login "medico@careplus.com")
 if [ -z "$TOK_MEDICO" ]; then
@@ -93,13 +124,15 @@ PROMPTS_MEDICO=(
   "qual a conduta para emergencia hipertensiva?"
   "quando iniciar insulina no diabetes tipo 2?"
   "quais exames de rastreamento anual no diabetico?"
+  # fora de escopo: deve responder que os documentos nao cobrem
+  "quem descobriu a penicilina?"
 )
 
 echo ""
-echo "[medico] Dr. Carlos Mendes"
+echo "[medico] Dr. Carlos Mendes — IA do Medico (RAG)"
 for p in "${PROMPTS_MEDICO[@]}"; do
   echo "  > $p"
-  chat "$TOK_MEDICO" "$p" | resumo
+  rag "$TOK_MEDICO" "$p" | resumo_rag
 done
 
 echo ""
