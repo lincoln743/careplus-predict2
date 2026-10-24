@@ -4,6 +4,7 @@
  * - medico: Inicio, Pacientes, Metricas, IA Medico, Config (5 tabs)
  */
 import React from "react";
+import { useWindowDimensions } from "react-native";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,21 @@ export function AppNavigator() {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const ehMedico = user?.role === "DOCTOR" || user?.role === "ADMIN";
+
+  // ============================================================
+  // Responsividade: detecta tablet (menor dimensao >= 600dp)
+  // segue a convencao Android/Material Design.
+  // ============================================================
+  const { width, height } = useWindowDimensions();
+  const menorDim = Math.min(width, height);
+  const isTablet = menorDim >= 600;
+
+  // Fatores de escala por tipo de aparelho.
+  const iconSize = isTablet ? 32 : 24;        // telefone: 24, tablet: 32
+  const labelSize = isTablet ? 14 : 10;       // telefone: 10, tablet: 14
+  const tabBarHeight = isTablet ? 76 : 56;    // telefone: 56, tablet: 76
+  const tabBarPadTop = isTablet ? 8 : 4;
+  const tabBarPadBot = isTablet ? 10 : 6;
 
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
@@ -59,10 +75,16 @@ export function AppNavigator() {
           headerTintColor: colors.primary,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          tabBarLabelStyle: { fontSize: 10 },
-          tabBarIcon: ({ focused, size }) => (
-            <Ionicons name={iconFor(route.name, focused)} size={size} color={focused ? colors.primary : colors.textMuted} />
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            height: tabBarHeight,
+            paddingTop: tabBarPadTop,
+            paddingBottom: tabBarPadBot,
+          },
+          tabBarLabelStyle: { fontSize: labelSize, fontWeight: "500" },
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={iconFor(route.name, focused)} size={iconSize} color={focused ? colors.primary : colors.textMuted} />
           ),
         })}
       >
